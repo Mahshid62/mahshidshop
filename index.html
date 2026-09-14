@@ -493,114 +493,89 @@
 
 
     function submitOrder() {
-
-        if (cart.length === 0) {
-
-            alert("لطفاً ابتدا حداقل یک محصول به سبد خرید اضافه کنید.");
-
-            return;
-        }
-
-
-        const name =
-            document.getElementById("name").value.trim();
-
-        const phone =
-            document.getElementById("phone").value.trim();
-
-        const address =
-            document.getElementById("address").value.trim();
-
-
-        if (!name) {
-
-            alert("لطفاً نام و نام خانوادگی را وارد کنید.");
-
-            return;
-        }
-
-
-        if (!phone) {
-
-            alert("لطفاً شماره موبایل را وارد کنید.");
-
-            return;
-        }
-
-
-        if (!address) {
-
-            alert("لطفاً آدرس را وارد کنید.");
-
-            return;
-        }
-
-
-        let total = 0;
-
-        let orderText = "🌹 سفارش جدید از فروشگاه ماهشید\n\n";
-
-
-        orderText += "🛍 محصولات:\n";
-
-
-        cart.forEach(item => {
-
-            const itemTotal =
-                item.price * item.quantity;
-
-            total += itemTotal;
-
-
-            orderText +=
-                `🌱 ${item.name}\n` +
-                `تعداد: ${item.quantity}\n` +
-                `قیمت: ${itemTotal.toLocaleString("fa-IR")} تومان\n\n`;
-
-        });
-
-
-        orderText +=
-            `💰 مجموع: ${total.toLocaleString("fa-IR")} تومان\n\n`;
-
-        orderText +=
-            `👤 نام: ${name}\n`;
-
-        orderText +=
-            `📱 موبایل: ${phone}\n`;
-
-        orderText +=
-            `📍 آدرس: ${address}`;
-
-
-        const message =
-            document.getElementById("message");
-
-        message.textContent =
-            "✅ سفارش شما آماده شد.\n\n" +
-            orderText +
-            "\n\nبرای ارسال این اطلاعات، آن را کپی کنید.";
-
-        message.style.display = "block";
-
-
-        const copyButton =
-            document.getElementById("copyButton");
-
-        copyButton.style.display = "block";
-
-
-        window.currentOrderText = orderText;
-
-
-        message.scrollIntoView({
-            behavior: "smooth",
-            block: "center"
-        });
-
+async function submitOrder() {
+    if (cart.length === 0) {
+        alert("لطفاً ابتدا حداقل یک محصول به سبد خرید اضافه کنید.");
+        return;
     }
 
+    const name = document.getElementById("name").value.trim();
+    const phone = document.getElementById("phone").value.trim();
+    const address = document.getElementById("address").value.trim();
 
+    if (!name) {
+        alert("لطفاً نام و نام خانوادگی را وارد کنید.");
+        return;
+    }
+
+    if (!phone) {
+        alert("لطفاً شماره موبایل را وارد کنید.");
+        return;
+    }
+
+    if (!address) {
+        alert("لطفاً آدرس را وارد کنید.");
+        return;
+    }
+
+    let total = 0;
+
+    cart.forEach(item => {
+        total += item.price * item.quantity;
+    });
+
+    const message = document.getElementById("message");
+
+    message.style.display = "block";
+    message.textContent = "⏳ در حال اتصال به درگاه پرداخت...";
+
+    try {
+        const response = await fetch("/api/payment", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                amount: total,
+                name: name,
+                phone: phone,
+                address: address,
+                cart: cart
+            })
+        });
+
+        const result = await response.json();
+
+        console.log("Payment response:", result);
+
+        if (result.success && result.paymentUrl) {
+            message.textContent =
+                "✅ سفارش آماده شد. در حال انتقال به درگاه پرداخت...";
+
+            window.location.href = result.paymentUrl;
+            return;
+        }
+
+        alert(
+            "❌ خطا در ایجاد پرداخت:\n" +
+            (result.message || "خطای نامشخص")
+        );
+
+        message.textContent =
+            "❌ پرداخت ایجاد نشد.";
+
+    } catch (error) {
+        console.error("Payment error:", error);
+
+        alert(
+            "❌ اتصال به سرور پرداخت انجام نشد.\n\n" +
+            "مطمئن شوید server.js در حال اجراست."
+        );
+
+        message.textContent =
+            "❌ اتصال به سرور انجام نشد.";
+    }
+}
     function copyOrder() {
 
         if (!window.currentOrderText) {
